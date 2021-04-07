@@ -1,0 +1,2 @@
+# trendycalculator
+A trendy calculator
