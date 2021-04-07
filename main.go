@@ -34,6 +34,7 @@ func main() {
 	err := app.GenerateStaticWebsite("docs", &app.Handler{
 		Name:        "Trendy Calculator",
 		Description: "A trendy calculator",
+		Resources: app.GitHubPages("trendycalculator"),
 	})
 
 	if err != nil {
@@ -52,7 +53,6 @@ func main() {
 		Styles: []string {
 			"/web/app.css",
 		},
-		Resources: app.GitHubPages("trendycalculator"),
 	})
 
 	if err := http.ListenAndServe(":8000", nil); err != nil {
