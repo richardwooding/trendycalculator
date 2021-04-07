@@ -1,7 +1,7 @@
-const cacheName = "app-" + "abb49f8ab33cb52d498a4f4ec994208c6eac842f";
+const cacheName = "app-" + "6278d5b065445521f12c29c2ab02def629c9b82d";
 
 self.addEventListener("install", event => {
-  console.log("installing app worker abb49f8ab33cb52d498a4f4ec994208c6eac842f");
+  console.log("installing app worker 6278d5b065445521f12c29c2ab02def629c9b82d");
   self.skipWaiting();
 
   event.waitUntil(
@@ -12,6 +12,7 @@ self.addEventListener("install", event => {
         "/trendycalculator/app.js",
         "/trendycalculator/manifest.webmanifest",
         "/trendycalculator/wasm_exec.js",
+        "/trendycalculator/web/app.css",
         "/trendycalculator/web/app.wasm",
         "https://storage.googleapis.com/murlok-github/icon-192.png",
         "https://storage.googleapis.com/murlok-github/icon-512.png",
@@ -33,7 +34,7 @@ self.addEventListener("activate", event => {
       );
     })
   );
-  console.log("app worker abb49f8ab33cb52d498a4f4ec994208c6eac842f is activated");
+  console.log("app worker 6278d5b065445521f12c29c2ab02def629c9b82d is activated");
 });
 
 self.addEventListener("fetch", event => {

@@ -34,6 +34,9 @@ func main() {
 	err := app.GenerateStaticWebsite("docs", &app.Handler{
 		Name:        "Trendy Calculator",
 		Description: "A trendy calculator",
+		Styles: []string {
+			"/web/app.css",
+		},
 		Resources: app.GitHubPages("trendycalculator"),
 	})
 
