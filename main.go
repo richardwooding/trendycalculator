@@ -52,6 +52,7 @@ func main() {
 		Styles: []string {
 			"/web/app.css",
 		},
+		Resources: app.GitHubPages("trendycalculator"),
 	})
 
 	if err := http.ListenAndServe(":8000", nil); err != nil {
