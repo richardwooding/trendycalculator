@@ -1,0 +1,12 @@
+.wrapper {
+    width: 300px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.display {
+    grid-column-start: 1;
+    grid-column-end: 5;
+    grid-row-start: 1;
+    grid-row-end: 1;
+}
