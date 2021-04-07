@@ -1,6 +1,7 @@
 package calculator
 
 import (
+	"errors"
 	"fmt"
 	"github.com/maxence-charriere/go-app/v8/pkg/app"
 	"strconv"
@@ -8,35 +9,40 @@ import (
 
 var buttons = []string{
 	"C", "()", "%", "/",
-	"7", "8", "9", "X",
+	"7", "8", "9", "*",
 	"4", "5", "6", "-",
 	"1", "2", "3", "+",
 	"+=", "0", ".", "=",
 }
 
-type operation func(a float64, b float64) float64
+type operation func(a float64, b float64) (string, float64, error)
 
-func add(a float64, b float64) float64 {
-	return a+b
+func add(a float64, b float64) (string, float64, error) {
+	return "+", a+b, nil
 }
 
-func subtract(a float64, b float64) float64 {
-	return a-b
+func subtract(a float64, b float64) (string, float64, error) {
+	return "-", a-b, nil
 }
 
-func multiply(a float64, b float64) float64 {
-	return a * b
+func multiply(a float64, b float64) (string, float64, error) {
+	return "*", a * b, nil
 }
 
-func divide(a float64, b float64) float64 {
-	return a * b
+func divide(a float64, b float64) (string, float64, error) {
+	if b == 0 {
+		return "/", 0, errors.New("Cannot divide by zerro")
+	}
+	return "/", a / b, nil
 }
 
 type Calculator struct {
 	app.Compo
 	previous *float64
+	symbol *string
 	current *float64
 	operation *operation
+	err error
 }
 
 func (c *Calculator) numberButton(number uint64) app.EventHandler {
@@ -48,6 +54,7 @@ func (c *Calculator) numberButton(number uint64) app.EventHandler {
 			v := *c.current * 10.0 + float64(number)
 			c.current = &v
 		}
+		c.err = nil
 		c.Update()
 	}
 }
@@ -56,24 +63,37 @@ func (c *Calculator) clear(ctx app.Context, e app.Event) {
 	c.previous = nil
 	c.current = nil
 	c.operation = nil
+	c.symbol = nil
+	c.err = nil
 	c.Update()
 }
 
 func (c *Calculator) operationButton(op operation) app.EventHandler {
 	return func(ctx app.Context, e app.Event) {
 		var v float64
+		var s string
 		if c.operation != nil && &c.previous != nil && c.current != nil {
-			v = (*c.operation)(*c.previous, *c.current)
+			s, v, c.err = (*c.operation)(*c.previous, *c.current)
 		} else if c.current != nil {
 			v = *c.current
+			s = ""
 		} else if c.previous != nil {
 			v = *c.previous
+			s = ""
 		} else {
 			v = 0
+			s = ""
 		}
-		c.previous = &v
-		c.current = nil
-		c.operation = &op
+		if c.err == nil {
+			c.previous = &v
+			c.current = nil
+			c.operation = &op
+			if s == "" {
+				c.symbol = nil
+			} else {
+				c.symbol = &s
+			}
+		}
 		c.Update()
 	}
 }
@@ -120,6 +140,7 @@ func (c *Calculator) Render() app.UI {
 		app.Range(buttons).Slice(func(i int) app.UI {
 			return app.Button().Text(buttons[i]).OnClick(c.HandleButton(buttons[i]))
 		}),
+		app.Div().Class("error").Text(c.err),
 	)
 }
 
