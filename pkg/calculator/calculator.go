@@ -2,9 +2,10 @@ package calculator
 
 import (
 	"errors"
-	"fmt"
 	"github.com/maxence-charriere/go-app/v8/pkg/app"
+	"math/big"
 	"strconv"
+	"strings"
 )
 
 var buttons = []string{
@@ -15,44 +16,90 @@ var buttons = []string{
 	"+=", "0", ".", "=",
 }
 
-type operation func(a float64, b float64) (string, float64, error)
-
-func add(a float64, b float64) (string, float64, error) {
-	return "+", a+b, nil
+var numbers = []*big.Float{
+	big.NewFloat(0),
+	big.NewFloat(1),
+	big.NewFloat(2),
+	big.NewFloat(3),
+	big.NewFloat(4),
+	big.NewFloat(5),
+	big.NewFloat(6),
+	big.NewFloat(7),
+	big.NewFloat(8),
+	big.NewFloat(9),
+	big.NewFloat(10),
 }
 
-func subtract(a float64, b float64) (string, float64, error) {
-	return "-", a-b, nil
+func  calcTength() *big.Float {
+	v := &big.Float{}
+	v.Quo(numbers[1], numbers[10])
+	return v
 }
 
-func multiply(a float64, b float64) (string, float64, error) {
-	return "*", a * b, nil
+var tenth = calcTength()
+
+type operation func(a *big.Float, b *big.Float) (string, *big.Float, error)
+
+func add(a *big.Float, b *big.Float) (string, *big.Float, error) {
+	c := &big.Float{}
+	c.Add(a, b)
+	return "+", c, nil
 }
 
-func divide(a float64, b float64) (string, float64, error) {
-	if b == 0 {
-		return "/", 0, errors.New("Cannot divide by zerro")
+func subtract(a *big.Float, b *big.Float) (string, *big.Float, error) {
+	c := &big.Float{}
+	return "-", c.Sub(a, b), nil
+}
+
+func multiply(a *big.Float, b *big.Float) (string, *big.Float, error) {
+	c := &big.Float{}
+	return "*", c.Mul(a, b), nil
+}
+
+func divide(a *big.Float, b *big.Float) (string, *big.Float, error) {
+	if b.Cmp(numbers[0]) == 0 {
+		return "/", nil, errors.New("Cannot divide by zerro")
 	}
-	return "/", a / b, nil
+	c := &big.Float{}
+	return "/", c.Quo(a, b), nil
 }
 
 type Calculator struct {
 	app.Compo
-	previous *float64
-	symbol *string
-	current *float64
-	operation *operation
-	err error
+	previous   *big.Float
+	symbol     *string
+	current    *big.Float
+	multiplier *big.Float
+	operation  *operation
+	err        error
 }
 
 func (c *Calculator) numberButton(number uint64) app.EventHandler {
 	return func(ctx app.Context, e app.Event) {
-		if c.current == nil {
-			v := float64(number)
-			c.current = &v
+		if c.multiplier == nil {
+			if c.current == nil {
+				v := big.NewFloat(float64(number))
+				c.current = v
+			} else {
+				x, v := &big.Float{}, &big.Float{}
+				x.Mul(c.current, numbers[10])
+				v.Add(x, big.NewFloat(float64(number)))
+				c.current = v
+			}
 		} else {
-			v := *c.current * 10.0 + float64(number)
-			c.current = &v
+			if c.current == nil {
+				v := &big.Float{}
+				v.Mul(big.NewFloat(float64(number)), c.multiplier)
+				c.current = v
+			} else {
+				v, x := &big.Float{}, &big.Float{}
+				x.Mul(big.NewFloat(float64(number)), c.multiplier)
+				v.Add(c.current, x)
+				c.current = v
+			}
+			nf := &big.Float{}
+			nf.Quo(c.multiplier, numbers[10])
+			c.multiplier = nf
 		}
 		c.err = nil
 		c.Update()
@@ -63,6 +110,7 @@ func (c *Calculator) clear(ctx app.Context, e app.Event) {
 	c.previous = nil
 	c.current = nil
 	c.operation = nil
+	c.multiplier = nil
 	c.symbol = nil
 	c.err = nil
 	c.Update()
@@ -70,22 +118,22 @@ func (c *Calculator) clear(ctx app.Context, e app.Event) {
 
 func (c *Calculator) operationButton(op operation) app.EventHandler {
 	return func(ctx app.Context, e app.Event) {
-		var v float64
+		var v *big.Float
 		var s string
 		if c.operation != nil && &c.previous != nil && c.current != nil {
-			s, v, c.err = (*c.operation)(*c.previous, *c.current)
+			s, v, c.err = (*c.operation)(c.previous, c.current)
 		} else if c.current != nil {
-			v = *c.current
+			v = c.current
 			s = ""
 		} else if c.previous != nil {
-			v = *c.previous
+			v = c.previous
 			s = ""
 		} else {
-			v = 0
+			v = numbers[0]
 			s = ""
 		}
 		if c.err == nil {
-			c.previous = &v
+			c.previous = v
 			c.current = nil
 			c.operation = &op
 			if s == "" {
@@ -93,9 +141,20 @@ func (c *Calculator) operationButton(op operation) app.EventHandler {
 			} else {
 				c.symbol = &s
 			}
+			c.multiplier = nil
 		}
 		c.Update()
 	}
+}
+
+func (c *Calculator) decimalPoint(ctx app.Context, e app.Event) {
+	if c.current == nil {
+		c.current = numbers[0]
+	}
+	if c.multiplier == nil {
+		c.multiplier = tenth
+	}
+	c.Update()
 }
 
 func (c *Calculator) HandleButton(button string) app.EventHandler {
@@ -104,6 +163,8 @@ func (c *Calculator) HandleButton(button string) app.EventHandler {
 		return c.numberButton(number)
  	}
  	switch button {
+	case ".":
+		return c.decimalPoint
 	case "C":
 		return c.clear
 	case "+":
@@ -121,17 +182,25 @@ func (c *Calculator) HandleButton(button string) app.EventHandler {
 
 		}
 	}
-
 }
 
 func (c *Calculator) renderNumber() app.UI {
+	var displayValue string
 	if c.current != nil {
-		return app.Input().Class("display").Value(strconv.FormatFloat(*c.current, 'f', -1, 64))
+		displayValue = c.current.String()
+		if c.multiplier != nil && !strings.Contains(displayValue, ".") {
+			displayValue = displayValue + "."
+		}
 	} else if c.previous != nil {
-		return app.Input().Class("display").Value(strconv.FormatFloat(*c.previous, 'f', -1, 64))
+		displayValue = c.previous.String()
 	} else {
-		return app.Input().Class("display").Value(fmt.Sprintf("0"))
+		if c.multiplier == nil {
+			displayValue = "0"
+		} else {
+			displayValue = "0."
+		}
 	}
+	return app.Input().Class("display").Value(displayValue)
 }
 
 func (c *Calculator) Render() app.UI {
