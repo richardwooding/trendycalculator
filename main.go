@@ -31,6 +31,7 @@ func main() {
 	// writing of server logic without needing precompiling instructions.
 	app.RunWhenOnBrowser()
 
+
 	err := app.GenerateStaticWebsite("docs", &app.Handler{
 		Name:        "Trendy Calculator",
 		Description: "A trendy calculator",
@@ -43,6 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 
 	// Finally, launching the server that serves the app is done by using the Go
 	// standard HTTP package.

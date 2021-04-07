@@ -9,11 +9,11 @@ import (
 )
 
 var buttons = []string{
-	"C", "()", "%", "/",
-	"7", "8", "9", "*",
+	"C", "()", "%", "÷",
+	"7", "8", "9", "×",
 	"4", "5", "6", "-",
 	"1", "2", "3", "+",
-	"+=", "0", ".", "=",
+	"±", "0", ".", "=",
 }
 
 var numbers = []*big.Float{
@@ -37,6 +37,7 @@ func  calcTength() *big.Float {
 }
 
 var tenth = calcTength()
+var minusOne = big.NewFloat(-1)
 
 type operation func(a *big.Float, b *big.Float) (string, *big.Float, error)
 
@@ -53,15 +54,15 @@ func subtract(a *big.Float, b *big.Float) (string, *big.Float, error) {
 
 func multiply(a *big.Float, b *big.Float) (string, *big.Float, error) {
 	c := &big.Float{}
-	return "*", c.Mul(a, b), nil
+	return "×", c.Mul(a, b), nil
 }
 
 func divide(a *big.Float, b *big.Float) (string, *big.Float, error) {
 	if b.Cmp(numbers[0]) == 0 {
-		return "/", nil, errors.New("Cannot divide by zerro")
+		return "÷", nil, errors.New("Cannot divide by zerro")
 	}
 	c := &big.Float{}
-	return "/", c.Quo(a, b), nil
+	return "÷", c.Quo(a, b), nil
 }
 
 type Calculator struct {
@@ -75,25 +76,25 @@ type Calculator struct {
 }
 
 func (c *Calculator) numberButton(number uint64) app.EventHandler {
+	n := numbers[number]
 	return func(ctx app.Context, e app.Event) {
 		if c.multiplier == nil {
 			if c.current == nil {
-				v := big.NewFloat(float64(number))
-				c.current = v
+				c.current = n
 			} else {
 				x, v := &big.Float{}, &big.Float{}
 				x.Mul(c.current, numbers[10])
-				v.Add(x, big.NewFloat(float64(number)))
+				v.Add(x, n)
 				c.current = v
 			}
 		} else {
 			if c.current == nil {
 				v := &big.Float{}
-				v.Mul(big.NewFloat(float64(number)), c.multiplier)
+				v.Mul(n, c.multiplier)
 				c.current = v
 			} else {
 				v, x := &big.Float{}, &big.Float{}
-				x.Mul(big.NewFloat(float64(number)), c.multiplier)
+				x.Mul(n, c.multiplier)
 				v.Add(c.current, x)
 				c.current = v
 			}
@@ -157,6 +158,16 @@ func (c *Calculator) decimalPoint(ctx app.Context, e app.Event) {
 	c.Update()
 }
 
+func (c *Calculator) toggleSign(ctx app.Context, e app.Event) {
+	if c.current == nil {
+		c.current = numbers[0]
+	}
+	v := &big.Float{}
+	v.Mul(c.current, minusOne)
+	c.current = v
+	c.Update()
+}
+
 func (c *Calculator) HandleButton(button string) app.EventHandler {
 	if '0' <= button[0] && button[0] <= '9' {
 		number, _ := strconv.ParseUint(button, 10, 64)
@@ -171,12 +182,14 @@ func (c *Calculator) HandleButton(button string) app.EventHandler {
 		return c.operationButton(add)
 	case "-":
 		return c.operationButton(subtract)
-	case "/":
+	case "÷":
 		return c.operationButton(divide)
-	case "*":
+	case "×":
 		return c.operationButton(multiply)
 	case "=":
 		return c.operationButton(nil)
+	case "±":
+		return c.toggleSign
 	default:
 		return func(ctx app.Context, e app.Event) {
 
@@ -187,12 +200,12 @@ func (c *Calculator) HandleButton(button string) app.EventHandler {
 func (c *Calculator) renderNumber() app.UI {
 	var displayValue string
 	if c.current != nil {
-		displayValue = c.current.String()
+		displayValue = c.current.Text('g', 16)
 		if c.multiplier != nil && !strings.Contains(displayValue, ".") {
 			displayValue = displayValue + "."
 		}
 	} else if c.previous != nil {
-		displayValue = c.previous.String()
+		displayValue = c.previous.Text('g', 16)
 	} else {
 		if c.multiplier == nil {
 			displayValue = "0"
@@ -207,7 +220,7 @@ func (c *Calculator) Render() app.UI {
 	return app.Div().Class("wrapper").Body(
 		c.renderNumber(),
 		app.Range(buttons).Slice(func(i int) app.UI {
-			return app.Button().Text(buttons[i]).OnClick(c.HandleButton(buttons[i]))
+			return app.Button().Class("key").Text(buttons[i]).OnClick(c.HandleButton(buttons[i]))
 		}),
 		app.Div().Class("error").Text(c.err),
 	)

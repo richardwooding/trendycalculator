@@ -2,6 +2,7 @@
     width: 300px;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
+    grid-gap: 5px;
 }
 
 .display {
@@ -9,6 +10,17 @@
     grid-column-end: 5;
     grid-row-start: 1;
     grid-row-end: 1;
+    font-family: monospace;
+    font-size: 27px;
+    background-color: black;
+    color: greenyellow;
+    text-align: right;
+}
+
+.key {
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 27px;
 }
 
 .error {
