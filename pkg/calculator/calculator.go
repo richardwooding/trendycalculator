@@ -3,7 +3,7 @@ package calculator
 import (
 	"errors"
 	"github.com/maxence-charriere/go-app/v8/pkg/app"
-	"math/big"
+	"github.com/ericlagergren/decimal"
 	"strconv"
 	"strings"
 )
@@ -16,91 +16,86 @@ var buttons = []string{
 	"±", "0", ".", "=",
 }
 
-var numbers = []*big.Float{
-	big.NewFloat(0),
-	big.NewFloat(1),
-	big.NewFloat(2),
-	big.NewFloat(3),
-	big.NewFloat(4),
-	big.NewFloat(5),
-	big.NewFloat(6),
-	big.NewFloat(7),
-	big.NewFloat(8),
-	big.NewFloat(9),
-	big.NewFloat(10),
+var numbers = []*decimal.Big{
+	decimal.New(0, 0),
+	decimal.New(1, 0),
+	decimal.New(2, 0),
+	decimal.New(3, 0),
+	decimal.New(4, 0),
+	decimal.New(5, 0),
+	decimal.New(6, 0),
+	decimal.New(7, 0),
+	decimal.New(8, 0),
+	decimal.New(9, 0),
+	decimal.New(10, 0),
 }
 
-func  calcTength() *big.Float {
-	v := &big.Float{}
-	v.Quo(numbers[1], numbers[10])
-	return v
-}
+var minusOne = decimal.New(-1, 0);
 
-var tenth = calcTength()
-var minusOne = big.NewFloat(-1)
+type operation func(a *decimal.Big, b *decimal.Big) (string, *decimal.Big, error)
 
-type operation func(a *big.Float, b *big.Float) (string, *big.Float, error)
-
-func add(a *big.Float, b *big.Float) (string, *big.Float, error) {
-	c := &big.Float{}
+func add(a *decimal.Big, b *decimal.Big) (string, *decimal.Big, error) {
+	c := &decimal.Big{}
 	c.Add(a, b)
 	return "+", c, nil
 }
 
-func subtract(a *big.Float, b *big.Float) (string, *big.Float, error) {
-	c := &big.Float{}
+func subtract(a *decimal.Big, b *decimal.Big) (string, *decimal.Big, error) {
+	c := &decimal.Big{}
 	return "-", c.Sub(a, b), nil
 }
 
-func multiply(a *big.Float, b *big.Float) (string, *big.Float, error) {
-	c := &big.Float{}
+func multiply(a *decimal.Big, b *decimal.Big) (string, *decimal.Big, error) {
+	c := &decimal.Big{}
 	return "×", c.Mul(a, b), nil
 }
 
-func divide(a *big.Float, b *big.Float) (string, *big.Float, error) {
+func divide(a *decimal.Big, b *decimal.Big) (string, *decimal.Big, error) {
 	if b.Cmp(numbers[0]) == 0 {
 		return "÷", nil, errors.New("Cannot divide by zerro")
 	}
-	c := &big.Float{}
+	c := &decimal.Big{}
 	return "÷", c.Quo(a, b), nil
 }
 
 type Calculator struct {
 	app.Compo
-	previous   *big.Float
-	symbol     *string
-	current    *big.Float
-	multiplier *big.Float
-	operation  *operation
-	err        error
+	previous  *decimal.Big
+	symbol    *string
+	current   *decimal.Big
+	scale     int
+	operation *operation
+	err       error
 }
 
 func (c *Calculator) numberButton(number uint64) app.EventHandler {
 	n := numbers[number]
 	return func(ctx app.Context, e app.Event) {
-		if c.multiplier == nil {
+		if c.scale == 0 {
 			if c.current == nil {
 				c.current = n
 			} else {
-				x, v := &big.Float{}, &big.Float{}
+				x, v := &decimal.Big{}, &decimal.Big{}
 				x.Mul(c.current, numbers[10])
 				v.Add(x, n)
 				c.current = v
 			}
 		} else {
-			if c.current == nil {
-				v := &big.Float{}
-				v.Mul(n, c.multiplier)
-				c.current = v
+			if c.scale <= 99 {
+				if c.current == nil {
+					v := &decimal.Big{}
+					v.Mul(n, decimal.New(1, c.scale))
+					c.current = v
+				} else {
+					v, x := &decimal.Big{}, &decimal.Big{}
+					x.Mul(n, decimal.New(1, c.scale))
+					v.Add(c.current, x)
+					c.current = v
+				}
+				c.scale++
 			} else {
-				v, x := &big.Float{}, &big.Float{}
-				x.Mul(n, c.multiplier)
-				v.Add(c.current, x)
-				c.current = v
+				c.err = errors.New("limited to 99 decimal points")
 			}
-			nf := &big.Float{}
-			nf.Quo(c.multiplier, numbers[10])
-			c.multiplier = nf
 		}
 		c.err = nil
 		c.Update()
@@ -111,7 +106,7 @@ func (c *Calculator) clear(ctx app.Context, e app.Event) {
 	c.previous = nil
 	c.current = nil
 	c.operation = nil
-	c.multiplier = nil
+	c.scale = 0
 	c.symbol = nil
 	c.err = nil
 	c.Update()
@@ -119,7 +114,7 @@ func (c *Calculator) clear(ctx app.Context, e app.Event) {
 
 func (c *Calculator) operationButton(op operation) app.EventHandler {
 	return func(ctx app.Context, e app.Event) {
-		var v *big.Float
+		var v *decimal.Big
 		var s string
 		if c.operation != nil && &c.previous != nil && c.current != nil {
 			s, v, c.err = (*c.operation)(c.previous, c.current)
@@ -142,7 +137,7 @@ func (c *Calculator) operationButton(op operation) app.EventHandler {
 			} else {
 				c.symbol = &s
 			}
-			c.multiplier = nil
+			c.scale = 0
 		}
 		c.Update()
 	}
@@ -152,8 +147,8 @@ func (c *Calculator) decimalPoint(ctx app.Context, e app.Event) {
 	if c.current == nil {
 		c.current = numbers[0]
 	}
-	if c.multiplier == nil {
-		c.multiplier = tenth
+	if c.scale == 0 {
+		c.scale = 1
 	}
 	c.Update()
 }
@@ -162,7 +157,7 @@ func (c *Calculator) toggleSign(ctx app.Context, e app.Event) {
 	if c.current == nil {
 		c.current = numbers[0]
 	}
-	v := &big.Float{}
+	v := &decimal.Big{}
 	v.Mul(c.current, minusOne)
 	c.current = v
 	c.Update()
@@ -200,14 +195,14 @@ func (c *Calculator) HandleButton(button string) app.EventHandler {
 func (c *Calculator) renderNumber() app.UI {
 	var displayValue string
 	if c.current != nil {
-		displayValue = c.current.Text('g', 16)
-		if c.multiplier != nil && !strings.Contains(displayValue, ".") {
+		displayValue = c.current.String()
+		if c.scale > 0 && !strings.Contains(displayValue, ".") {
 			displayValue = displayValue + "."
 		}
 	} else if c.previous != nil {
-		displayValue = c.previous.Text('g', 16)
+		displayValue = c.previous.String()
 	} else {
-		if c.multiplier == nil {
+		if c.scale == 0 {
 			displayValue = "0"
 		} else {
 			displayValue = "0."
