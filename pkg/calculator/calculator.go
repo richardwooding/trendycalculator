@@ -129,7 +129,7 @@ func (c *Calculator) operationButton(op operation) app.EventHandler {
 			s = ""
 		}
 		if c.err == nil {
-			c.previous = v
+			c.previous = v.Reduce()
 			c.current = nil
 			c.operation = &op
 			if s == "" {
