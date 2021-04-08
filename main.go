@@ -43,8 +43,7 @@ func main() {
 
 	if err != nil {
 		log.Fatal(err)
-	}
-	 */
+	}*/
 
 
 	// Finally, launching the server that serves the app is done by using the Go

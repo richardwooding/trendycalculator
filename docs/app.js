@@ -28,7 +28,7 @@ if ("serviceWorker" in navigator) {
 // -----------------------------------------------------------------------------
 // Init progressive app
 // -----------------------------------------------------------------------------
-const goappEnv = {"GOAPP_ROOT_PREFIX":"/trendycalculator","GOAPP_STATIC_RESOURCES_URL":"/trendycalculator","GOAPP_VERSION":"0814491b2c7fe69babb1d86effba45689dbc8602"};
+const goappEnv = {"GOAPP_ROOT_PREFIX":"/trendycalculator","GOAPP_STATIC_RESOURCES_URL":"/trendycalculator","GOAPP_VERSION":"8a9e281b7d0fde851818ff43d7b71637f91b3b20"};
 
 function goappGetenv(k) {
   return goappEnv[k];
